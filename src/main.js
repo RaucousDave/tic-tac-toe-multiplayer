@@ -1,5 +1,5 @@
 // Connect to server
-const url = process.env.WEBSOCKET_URL;
+const url = import.meta.env.VITE_WEBSOCKET_URL;
 
 const ws = new WebSocket(url);
 
@@ -93,3 +93,5 @@ cells.forEach((cell, index) => {
 function resetGame() {
   ws.send(JSON.stringify({ type: "reset" }));
 }
+
+window.resetGame = resetGame;
