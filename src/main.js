@@ -1,5 +1,7 @@
 // Connect to server
-const ws = new WebSocket("ws://localhost:8080");
+const url = process.env.WEBSOCKET_URL;
+
+const ws = new WebSocket(url);
 
 let playerRole = null;
 let currentGameState = null;
