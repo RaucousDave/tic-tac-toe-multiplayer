@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="src/style.css" />
   </head>
   <body>
-    <h1 class="text-center font-black text-4xl mt-12">TIC TAC TOE</h1>
+    <h1 class="page-title">TIC TAC TOE</h1>
     <div class="scoreboard">
       <div class="flex min-w-16 flex-col items-center">
         <span class="player-role">Player X</span>
@@ -21,6 +21,14 @@
     </div>
 
     <section class="game-container">
+      <div class="room-panel">
+        <label for="invite-link">Invite link</label>
+        <div class="room-link-row">
+          <input id="invite-link" type="text" readonly />
+          <button id="copy-invite" type="button">Copy</button>
+        </div>
+      </div>
+
       <div class="grid-container">
         <div></div>
         <div></div>
@@ -34,13 +42,8 @@
       </div>
       <span id="announcement"></span>
       <button
+        class="reset-button"
         onclick="resetGame()"
-        style="
-          margin-top: 20px;
-          padding: 10px 20px;
-          font-size: 16px;
-          cursor: pointer;
-        "
       >
         Reset Game
       </button>

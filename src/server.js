@@ -13,21 +13,22 @@ const server = http.createServer((req, res) => {
 });
 const wss = new WebSocketServer({ server });
 
-class Player {
-  constructor(playerRole, score) {
-    this.playerRole = playerRole;
-    this.score = score;
-  }
-}
+const rooms = new Map();
 
-let gameState = {
-  gameOver: false,
-  draw: false,
-  board: [null, null, null, null, null, null, null, null, null],
-  winner: null,
-  currentPlayer: "X",
-  players: {},
-};
+function createGameState() {
+  return {
+    gameOver: false,
+    draw: false,
+    board: [null, null, null, null, null, null, null, null, null],
+    winner: null,
+    currentPlayer: "X",
+    players: {},
+    scores: {
+      X: 0,
+      O: 0,
+    },
+  };
+}
 
 // Winning combinations
 const winningCombinations = [
@@ -41,10 +42,6 @@ const winningCombinations = [
   [2, 4, 6],
 ];
 
-// Players
-const player1 = new Player("X", 0);
-const player2 = new Player("O", 0);
-
 function checkWinner(board, playerRole) {
   return winningCombinations.some((combination) => {
     const [a, b, c] = combination;
@@ -56,21 +53,19 @@ function checkWinner(board, playerRole) {
   });
 }
 
-function sendGameUpdate() {
+function sendGameUpdate(room) {
   const message = JSON.stringify({
     type: "update",
-    board: gameState.board,
-    currentPlayer: gameState.currentPlayer,
-    gameOver: gameState.gameOver,
-    draw: gameState.draw,
-    winner: gameState.winner,
-    scores: {
-      X: player1.score,
-      O: player2.score,
-    },
+    roomId: room.id,
+    board: room.gameState.board,
+    currentPlayer: room.gameState.currentPlayer,
+    gameOver: room.gameState.gameOver,
+    draw: room.gameState.draw,
+    winner: room.gameState.winner,
+    scores: room.gameState.scores,
   });
 
-  Object.values(gameState.players).forEach((ws) => {
+  Object.values(room.gameState.players).forEach((ws) => {
     if (ws && ws.readyState === 1) {
       // 1 = OPEN
       ws.send(message);
@@ -78,24 +73,57 @@ function sendGameUpdate() {
   });
 }
 
-wss.on("connection", (ws) => {
-  console.log("Player connected");
+function getRoomId(req) {
+  const url = new URL(req.url, "http://localhost");
+  return url.searchParams.get("room") || "lobby";
+}
+
+function getOrCreateRoom(roomId) {
+  if (!rooms.has(roomId)) {
+    rooms.set(roomId, {
+      id: roomId,
+      gameState: createGameState(),
+    });
+  }
+
+  return rooms.get(roomId);
+}
+
+function resetBoard(gameState) {
+  gameState.gameOver = false;
+  gameState.draw = false;
+  gameState.board = [null, null, null, null, null, null, null, null, null];
+  gameState.winner = null;
+  gameState.currentPlayer = "X";
+}
+
+wss.on("connection", (ws, req) => {
+  const room = getOrCreateRoom(getRoomId(req));
+  let { gameState } = room;
+
+  console.log(`Player connected to room ${room.id}`);
 
   if (!gameState.players["X"]) {
     gameState.players["X"] = ws;
     ws.playerRole = "X";
-    ws.send(JSON.stringify({ type: "assigned", playerRole: "X" }));
+    ws.send(
+      JSON.stringify({ type: "assigned", playerRole: "X", roomId: room.id }),
+    );
   } else if (!gameState.players["O"]) {
     gameState.players["O"] = ws;
     ws.playerRole = "O";
-    ws.send(JSON.stringify({ type: "assigned", playerRole: "O" }));
+    ws.send(
+      JSON.stringify({ type: "assigned", playerRole: "O", roomId: room.id }),
+    );
   } else {
     ws.send(JSON.stringify({ type: "error", message: "Game is full" }));
     ws.close();
     return;
   }
 
-  sendGameUpdate();
+  ws.roomId = room.id;
+
+  sendGameUpdate(room);
 
   ws.on("message", (data) => {
     try {
@@ -103,6 +131,11 @@ wss.on("connection", (ws) => {
 
       if (message.type === "move") {
         const index = message.cellIndex;
+
+        if (!Number.isInteger(index) || index < 0 || index > 8) {
+          ws.send(JSON.stringify({ type: "error", message: "Invalid move" }));
+          return;
+        }
 
         if (gameState.currentPlayer !== ws.playerRole) {
           ws.send(JSON.stringify({ type: "error", message: "Not your turn!" }));
@@ -122,13 +155,13 @@ wss.on("connection", (ws) => {
         gameState.board[index] = gameState.currentPlayer;
 
         if (checkWinner(gameState.board, gameState.currentPlayer)) {
-          const player = gameState.currentPlayer === "X" ? player1 : player2;
-          player.score++;
+          gameState.scores[gameState.currentPlayer]++;
           gameState.winner = gameState.currentPlayer;
           gameState.gameOver = true;
         }
 
-        gameState.draw = gameState.board.every((cell) => cell !== null);
+        gameState.draw =
+          !gameState.winner && gameState.board.every((cell) => cell !== null);
         if (gameState.draw) {
           gameState.gameOver = true;
         }
@@ -137,19 +170,12 @@ wss.on("connection", (ws) => {
           gameState.currentPlayer = gameState.currentPlayer === "X" ? "O" : "X";
         }
 
-        sendGameUpdate();
+        sendGameUpdate(room);
       }
 
       if (message.type === "reset") {
-        gameState = {
-          gameOver: false,
-          draw: false,
-          board: [null, null, null, null, null, null, null, null, null],
-          winner: null,
-          currentPlayer: "X",
-          players: gameState.players,
-        };
-        sendGameUpdate();
+        resetBoard(gameState);
+        sendGameUpdate(room);
       }
     } catch (error) {
       console.error(error);
@@ -157,8 +183,12 @@ wss.on("connection", (ws) => {
   });
 
   ws.on("close", () => {
-    console.log(`Player ${ws.playerRole} disconnected`);
+    console.log(`Player ${ws.playerRole} disconnected from room ${room.id}`);
     delete gameState.players[ws.playerRole];
+
+    if (Object.keys(gameState.players).length === 0) {
+      rooms.delete(room.id);
+    }
   });
 });
 

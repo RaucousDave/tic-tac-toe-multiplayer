@@ -1,25 +1,47 @@
 @import "tailwindcss";
 
 @layer components {
+  body {
+    @apply min-h-screen bg-white text-gray-950;
+  }
+  .page-title {
+    @apply mx-auto mt-6 w-full px-4 text-center text-3xl font-black sm:mt-10 sm:text-4xl;
+  }
   .scoreboard {
-    @apply fixed top-6 right-6 flex gap-6 rounded-xl border-2 border-gray-900 bg-white px-6 py-4 shadow-[4px_4px_0px_#111827];
+    @apply mx-auto mt-4 flex w-[min(92vw,22rem)] justify-center gap-6 rounded-lg border-2 border-gray-900 bg-white px-4 py-3 shadow-[4px_4px_0px_#111827] sm:fixed sm:top-6 sm:right-6 sm:mt-0 sm:w-auto sm:px-6 sm:py-4;
   }
   .player-role {
     @apply text-sm font-semibold text-gray-500;
   }
   .player-score {
-    @apply text-3xl font-extrabold text-gray-900;
+    @apply text-2xl font-extrabold text-gray-900 sm:text-3xl;
   }
   .game-container {
-    @apply flex h-screen flex-col items-center p-12 justify-center;
+    @apply mx-auto flex min-h-[calc(100vh-10rem)] w-full max-w-4xl flex-col items-center justify-center gap-5 px-4 py-8 sm:min-h-screen sm:px-8 sm:py-12;
+  }
+  .room-panel {
+    @apply flex w-full max-w-xl flex-col gap-2;
+  }
+  .room-panel label {
+    @apply text-sm font-bold uppercase tracking-normal text-gray-500;
+  }
+  .room-link-row {
+    @apply flex w-full flex-col gap-2 sm:flex-row;
+  }
+  #invite-link {
+    @apply min-w-0 flex-1 rounded-lg border-2 border-gray-900 px-3 py-2 text-sm font-medium text-gray-700 shadow-[3px_3px_0px_#111827] outline-none;
+  }
+  #copy-invite,
+  .reset-button {
+    @apply cursor-pointer rounded-lg border-2 border-gray-900 bg-white px-5 py-2 text-base font-extrabold text-gray-950 shadow-[3px_3px_0px_#111827] transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-none;
   }
   .grid-container {
-    @apply grid grid-cols-3 grid-rows-3 p-12 w-1/2 h-full;
+    @apply grid aspect-square w-[min(86vw,28rem)] grid-cols-3 grid-rows-3;
     border-collapse: collapse;
   }
   .grid-container > div {
     cursor: pointer;
-    @apply border-r border-b border-red-500 flex items-center justify-center;
+    @apply flex aspect-square items-center justify-center border-r-2 border-b-2 border-red-500;
   }
 
   .grid-container > div:nth-child(3n) {
@@ -30,9 +52,9 @@
     @apply border-b-0;
   }
   .grid-container > div > p {
-    @apply text-7xl font-semibold;
+    @apply text-5xl font-semibold sm:text-7xl;
   }
   #announcement {
-    @apply text-3xl font-semibold;
+    @apply min-h-10 max-w-[92vw] text-center text-xl font-semibold sm:text-3xl;
   }
 }

@@ -1,5 +1,9 @@
 // Connect to server
-const url = import.meta.env.VITE_WEBSOCKET_URL;
+const RENDER_WEBSOCKET_URL = "wss://tic-tac-toe-multiplayer-8f0p.onrender.com";
+const baseWebSocketUrl =
+  import.meta.env.VITE_WEBSOCKET_URL || RENDER_WEBSOCKET_URL;
+const roomId = getRoomId();
+const url = `${baseWebSocketUrl}?room=${encodeURIComponent(roomId)}`;
 
 const ws = new WebSocket(url);
 
@@ -11,11 +15,44 @@ const cells = document.querySelectorAll(".grid-container > div");
 const announcement = document.getElementById("announcement");
 const playerScores = document.querySelectorAll(".player-score");
 const playerRoles = document.querySelectorAll(".player-role");
+const inviteLink = document.getElementById("invite-link");
+const copyInvite = document.getElementById("copy-invite");
+
+const shareUrl = new URL(window.location.href);
+shareUrl.searchParams.set("room", roomId);
+inviteLink.value = shareUrl.toString();
+
+function getRoomId() {
+  const currentUrl = new URL(window.location.href);
+  const existingRoomId = currentUrl.searchParams.get("room");
+
+  if (existingRoomId) {
+    return existingRoomId;
+  }
+
+  const newRoomId = crypto.randomUUID();
+  currentUrl.searchParams.set("room", newRoomId);
+  window.history.replaceState(null, "", currentUrl);
+  return newRoomId;
+}
 
 // Connection opened
 ws.onopen = () => {
   console.log("Connected to server");
 };
+
+copyInvite.addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(inviteLink.value);
+    copyInvite.textContent = "Copied";
+    setTimeout(() => {
+      copyInvite.textContent = "Copy";
+    }, 1500);
+  } catch {
+    inviteLink.select();
+    document.execCommand("copy");
+  }
+});
 
 // Receive messages from server
 ws.onmessage = (event) => {
