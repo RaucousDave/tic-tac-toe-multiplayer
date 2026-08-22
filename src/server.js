@@ -153,6 +153,7 @@ wss.on("connection", (ws) => {
   });
 });
 
-server.listen(8080, () => {
-  console.log("🎮 Tic-Tac-Toe server on ws://localhost:8080");
+const PORT = process.env.PORT || 8080;
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`🎮 Tic-Tac-Toe server running on port ${PORT}`);
 });
